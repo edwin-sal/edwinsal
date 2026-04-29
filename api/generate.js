@@ -242,7 +242,7 @@ module.exports = async (req, res) => {
     const post = {
       slug,
       title,
-      date: new Date(ts).toISOString().slice(0, 10),
+      date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(ts),
       html,
       ts,
     };

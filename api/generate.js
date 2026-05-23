@@ -100,6 +100,7 @@ async function callGeminiOnce(apiKey, model, userTurn, log, attempt) {
     contents: [{ role: 'user', parts: [{ text: userTurn }] }],
     generationConfig: {
       responseMimeType: 'application/json',
+      maxOutputTokens: 8192,
       responseJsonSchema: {
         type: 'object',
         properties: {
@@ -127,7 +128,12 @@ async function callGeminiOnce(apiKey, model, userTurn, log, attempt) {
     throw err;
   }
   const data = await res.json();
-  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const candidate = data?.candidates?.[0];
+  const finishReason = candidate?.finishReason;
+  if (finishReason && finishReason !== 'STOP') {
+    log.warn('gemini non-STOP finish', { model, attempt, finishReason });
+  }
+  const text = candidate?.content?.parts?.[0]?.text;
   if (!text) throw new Error('gemini: no text in response');
   const parsed = JSON.parse(text);
   if (typeof parsed?.title !== 'string' || typeof parsed?.html !== 'string') {

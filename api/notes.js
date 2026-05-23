@@ -7,7 +7,6 @@ const LOCALHOST_RE = /^http:\/\/localhost(:\d+)?$/;
 const MAX_LEN = 20;
 const STRIP_RE = /[\x00-\x1F\x7F\u200B-\u200D\uFEFF]/g;
 const RATE_WINDOW_SEC = 60;
-const NOTE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const NOTES_KEY = 'notes';
 
 const BROWSERS = [
@@ -59,8 +58,6 @@ function setCors(res, origin) {
 }
 
 async function readNotes(client) {
-  const cutoff = Date.now() - NOTE_TTL_MS;
-  await client.zremrangebyscore(NOTES_KEY, 0, cutoff);
   return await client.zrange(NOTES_KEY, 0, -1);
 }
 

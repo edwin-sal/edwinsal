@@ -1,14 +1,1 @@
-{
-  "functions": {
-    "api/generate.js": {
-      "maxDuration": 60,
-      "includeFiles": "api/prompt.md"
-    }
-  },
-  "crons": [
-    {
-      "path": "/api/generate",
-      "schedule": "7 22 * * *"
-    }
-  ]
-}
+{}

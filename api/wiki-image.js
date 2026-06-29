@@ -18,7 +18,7 @@ function randomPastDate() {
 
 function pad(n) { return String(n).padStart(2, '0'); }
 
-async function fetchAndSeed(redis) {
+async function fetchAndSeed(redis, save = true) {
   for (let i = 0; i < 5; i++) {
     try {
       const date = randomPastDate();
@@ -40,7 +40,7 @@ async function fetchAndSeed(redis) {
         commonsUrl: `https://commons.wikimedia.org/wiki/${encodeURIComponent(raw.title || '')}`,
         savedAt: Date.now(),
       };
-      await redis.set(WIKI_IMAGE_KEY, payload);
+      if (save) await redis.set(WIKI_IMAGE_KEY, payload);
       return payload;
     } catch (_) {}
   }
@@ -60,10 +60,11 @@ module.exports = async (req, res) => {
   }
 
   try {
-    let image = await redis.get(WIKI_IMAGE_KEY);
+    const fresh = req.query?.fresh === '1';
+    let image = fresh ? null : await redis.get(WIKI_IMAGE_KEY);
 
     if (!image) {
-      image = await fetchAndSeed(redis);
+      image = await fetchAndSeed(redis, !fresh);
     }
 
     if (!image) {

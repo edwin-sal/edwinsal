@@ -73,7 +73,7 @@ module.exports = async (req, res) => {
       return res.json({ error: 'no image available' });
     }
 
-    res.setHeader('Cache-Control', fresh ? 'no-store' : 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'no-store');
     return res.json(image);
   } catch (e) {
     res.statusCode = 502;

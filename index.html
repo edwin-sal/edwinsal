@@ -445,7 +445,9 @@
           return;
         }
         const img = await res.json();
-        const safeCaption = (img.caption || '').replace(/href="\/wiki\//g, 'href="https://en.wikipedia.org/wiki/');
+        const safeCaption = (img.caption || '')
+          .replace(/href="\/wiki\//g, 'href="https://en.wikipedia.org/wiki/')
+          .replace(/<a /g, '<a target="_blank" rel="noopener" ');
         const safeUrl = img.commonsUrl || '#';
         const safeSrc = img.src || '';
         const safeTitle = img.title ? img.title.replace(/^File:/, '') : 'Wikipedia image';

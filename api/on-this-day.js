@@ -20,26 +20,21 @@ function getManilaMonthDay() {
   return { m, d };
 }
 
-const CATEGORIES = ['events', 'births', 'deaths', 'holidays', 'selected'];
-
 async function fetchAndSeed(redis) {
   try {
     const { m, d } = getManilaMonthDay();
-    const url = `https://en.wikipedia.org/api/rest_v1/feed/onthisday/all/${m}/${d}`;
+    const url = `https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${m}/${d}`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'edwinsal.vercel.app (personal site)' },
     });
     if (!res.ok) return null;
     const data = await res.json();
-    const pool = CATEGORIES.flatMap((category) =>
-      (data[category] || []).map((entry) => ({ category, entry }))
-    );
-    if (!pool.length) return null;
-    const { category, entry } = pool[Math.floor(Math.random() * pool.length)];
+    const events = data.events || [];
+    if (!events.length) return null;
+    const event = events[Math.floor(Math.random() * events.length)];
     const payload = {
-      category,
-      year: entry.year,
-      text: entry.text,
+      year: event.year,
+      text: event.text,
       savedAt: Date.now(),
     };
     await redis.set(ON_THIS_DAY_KEY, payload);

@@ -229,14 +229,16 @@
       <p>I spend a lot of time figuring out how to do less, better. Lately, that involves letting systems take a first pass and then shaping what comes out. It's surprisingly effective.</p>
     </section>
 
-    <section id="now">
-      <h2>Now</h2>
-      <p>This section is where I share what I'm currently working on or thinking about. Check back soon for updates.</p>
-    </section>
-
     <section id="projects">
       <h2>Projects</h2>
       <p><em>(Coming soon — working on documenting some things worth sharing.)</em></p>
+    </section>
+
+    <section id="on-this-day">
+      <h2>on this day</h2>
+      <div id="on-this-day-container">
+        <p style="color:#888;font-style:italic;font-size:.9rem;">Loading…</p>
+      </div>
     </section>
 
     <section id="wiki-image">
@@ -473,6 +475,25 @@
       }
     }
     document.addEventListener('DOMContentLoaded', loadWikiImage);
+
+    async function loadOnThisDay() {
+      const container = document.getElementById('on-this-day-container');
+      try {
+        const res = await fetch('/api/on-this-day');
+        if (!res.ok) {
+          container.innerHTML = '<p style="color:#888;font-style:italic;font-size:.9rem;">No fact yet — check back tomorrow.</p>';
+          return;
+        }
+        const fact = await res.json();
+        const p = document.createElement('p');
+        p.textContent = fact.year ? `In ${fact.year}, ${fact.text}` : fact.text;
+        container.innerHTML = '';
+        container.appendChild(p);
+      } catch (e) {
+        container.innerHTML = '<p style="color:#888;font-style:italic;font-size:.9rem;">Could not load fact.</p>';
+      }
+    }
+    document.addEventListener('DOMContentLoaded', loadOnThisDay);
 
   </script>
 </body>

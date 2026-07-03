@@ -485,8 +485,19 @@
           return;
         }
         const fact = await res.json();
+        const text = (fact.text || '').replace(/\n/g, ': ');
+        let sentence;
+        if (fact.category === 'births') {
+          sentence = fact.year ? `${text} was born in ${fact.year}.` : text;
+        } else if (fact.category === 'deaths') {
+          sentence = fact.year ? `${text} died in ${fact.year}.` : text;
+        } else if (fact.category === 'holidays') {
+          sentence = text;
+        } else {
+          sentence = fact.year ? `In ${fact.year}, ${text}` : text;
+        }
         const p = document.createElement('p');
-        p.textContent = fact.year ? `In ${fact.year}, ${fact.text}` : fact.text;
+        p.textContent = sentence;
         container.innerHTML = '';
         container.appendChild(p);
       } catch (e) {

@@ -20,17 +20,21 @@ function getManilaMonthDay() {
   return { m, d };
 }
 
-async function pickEvent() {
+const CATEGORIES = ['events', 'births', 'deaths', 'holidays', 'selected'];
+
+async function pickFact() {
   const { m, d } = getManilaMonthDay();
-  const url = `https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${m}/${d}`;
+  const url = `https://en.wikipedia.org/api/rest_v1/feed/onthisday/all/${m}/${d}`;
   const res = await fetch(url, {
     headers: { 'User-Agent': 'edwinsal.vercel.app (personal site)' },
   });
   if (!res.ok) throw new Error(`Wikipedia API ${res.status}`);
   const data = await res.json();
-  const events = data.events || [];
-  if (!events.length) throw new Error('no events in feed');
-  return events[Math.floor(Math.random() * events.length)];
+  const pool = CATEGORIES.flatMap((category) =>
+    (data[category] || []).map((entry) => ({ category, entry }))
+  );
+  if (!pool.length) throw new Error('no facts in feed');
+  return pool[Math.floor(Math.random() * pool.length)];
 }
 
 module.exports = async (req, res) => {
@@ -47,10 +51,11 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const event = await pickEvent();
+    const { category, entry } = await pickFact();
     const payload = {
-      year: event.year,
-      text: event.text,
+      category,
+      year: entry.year,
+      text: entry.text,
       savedAt: Date.now(),
     };
     await redis.set(ON_THIS_DAY_KEY, payload);

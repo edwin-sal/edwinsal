@@ -1,8 +1,1 @@
-{
-  "crons": [
-    {
-      "path": "/api/cron/wiki-image",
-      "schedule": "0 22 * * *"
-    }
-  ]
-}
+{}

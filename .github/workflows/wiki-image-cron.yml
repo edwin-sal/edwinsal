@@ -1,0 +1,16 @@
+name: Refresh image of the hour
+
+on:
+  schedule:
+    - cron: '0 * * * *'
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger wiki-image cron endpoint
+        run: |
+          curl -sf -X GET \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            https://edwinsal.vercel.app/api/cron/wiki-image

@@ -1,7 +1,8 @@
 const { Redis } = require('@upstash/redis');
 
 const WIKI_IMAGE_KEY = 'wiki:image';
-const DAYS_BACK = 730;
+// Wikipedia's featured-feed REST API has no data before this date.
+const FEED_START_DATE = new Date('2016-01-01T00:00:00Z');
 
 function getRedis() {
   const url = process.env.KV_REST_API_URL;
@@ -11,8 +12,9 @@ function getRedis() {
 }
 
 function randomPastDate() {
+  const daysBack = Math.floor((Date.now() - FEED_START_DATE.getTime()) / 86400000);
   const d = new Date();
-  d.setDate(d.getDate() - 1 - Math.floor(Math.random() * DAYS_BACK));
+  d.setDate(d.getDate() - 1 - Math.floor(Math.random() * daysBack));
   return d;
 }
 

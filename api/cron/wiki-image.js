@@ -3,6 +3,10 @@ const { Redis } = require('@upstash/redis');
 const WIKI_IMAGE_KEY = 'wiki:image';
 const ATTEMPTS = 6;
 const USER_AGENT = 'edwinsal.vercel.app (personal site)';
+const MAX_SRC_BYTES = 1_000_000;
+// Wikimedia rejects direct/hotlinked thumbnail requests for arbitrary widths;
+// only these standard $wgThumbnailSteps sizes are served without a 400.
+const FALLBACK_WIDTH = 960;
 
 function getRedis() {
   const url = process.env.KV_REST_API_URL;
@@ -33,6 +37,25 @@ async function fetchArticleHtml(title) {
   return data.parse?.text || null;
 }
 
+const THUMB_URL_RE = /^\/\/upload\.wikimedia\.org\/(.+)\/thumb\/(.+)\/\d+px-([^/]+)$/;
+
+async function resolveImageSrc(thumbSrc) {
+  const m = THUMB_URL_RE.exec(thumbSrc);
+  if (!m) return thumbSrc.startsWith('//') ? `https:${thumbSrc}` : thumbSrc;
+  const [, projectPath, hashAndFile, renderedFilename] = m;
+  const originalUrl = `https://upload.wikimedia.org/${projectPath}/${hashAndFile}`;
+  const fallbackUrl = `https://upload.wikimedia.org/${projectPath}/thumb/${hashAndFile}/${FALLBACK_WIDTH}px-${renderedFilename}`;
+
+  try {
+    const res = await fetch(originalUrl, { method: 'HEAD', headers: { 'User-Agent': USER_AGENT } });
+    const len = Number(res.headers.get('content-length'));
+    if (res.ok && Number.isFinite(len) && len > 0 && len <= MAX_SRC_BYTES) {
+      return originalUrl;
+    }
+  } catch (_) {}
+  return fallbackUrl;
+}
+
 function extractFigures(html) {
   const figures = [];
   const figureRe = /<figure\b[^>]*typeof="mw:File\/Thumb"[^>]*>([\s\S]*?)<\/figure>/g;
@@ -61,7 +84,7 @@ async function pickFigureFromArticle() {
   if (!figures.length) return null;
   const figure = figures[Math.floor(Math.random() * figures.length)];
 
-  const src = figure.src.startsWith('//') ? `https:${figure.src}` : figure.src;
+  const src = await resolveImageSrc(figure.src);
   const caption = figure.captionHtml.replace(
     /href="#(cite_note-[^"]*)"/g,
     (_, anchor) => `href="${articleUrl(title)}#${anchor}"`

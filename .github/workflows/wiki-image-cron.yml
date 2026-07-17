@@ -1,8 +1,9 @@
-name: Refresh image of the hour
+name: Refresh image of the day
 
 on:
   schedule:
-    - cron: '0 * * * *'
+    # 22:00 UTC = 06:00 Asia/Manila (UTC+8, no DST)
+    - cron: '0 22 * * *'
   workflow_dispatch: {}
 
 jobs:

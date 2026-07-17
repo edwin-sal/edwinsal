@@ -10,11 +10,32 @@
 
     html {
       font-size: 17px;
+      --accent: #a33;
+      --bg: #fdfcf9;
+      --main: #1a1a1a;
+      --panel-bg: #f6f2e9;
+      --note-bg: #fff8d8;
+      --note-color: #333;
+      --border: #e0ddd5;
+      --link-underline: #e3c7c7;
+      --link-visited: #7a2020;
+    }
+
+    html.dark-mode {
+      --accent: #85b8c4;
+      --bg: #222;
+      --main: #c8c8c8;
+      --panel-bg: #2a2a2a;
+      --note-bg: #3a3730;
+      --note-color: #c8c8c8;
+      --border: #444;
+      --link-underline: #4a4038;
+      --link-visited: #c99;
     }
 
     body {
-      background: #fdfcf9;
-      color: #1a1a1a;
+      background: var(--bg);
+      color: var(--main);
       font-family: "Iowan Old Style", "Palatino Linotype", "URW Palladio L",
                    P052, Georgia, serif;
       line-height: 1.7;
@@ -29,6 +50,23 @@
       letter-spacing: -0.01em;
       margin: 0 0 .2rem;
       font-family: "Charter", "Charis SIL", "Iowan Old Style", Georgia, serif;
+    }
+
+    .header-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .icon-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1.8rem;
+      line-height: 1;
+      color: inherit;
+      padding: 0;
     }
 
     .tagline {
@@ -51,12 +89,12 @@
     p { margin: 0 0 1rem; }
 
     a {
-      color: #a33;
+      color: var(--accent);
       text-decoration: none;
-      border-bottom: 1px solid #e3c7c7;
+      border-bottom: 1px solid var(--link-underline);
     }
-    a:hover { border-bottom-color: #a33; }
-    a:visited { color: #7a2020; }
+    a:hover { border-bottom-color: var(--accent); }
+    a:visited { color: var(--link-visited); }
 
     /* Scrolling marquee for cool links */
     .ticker-wrap {
@@ -76,7 +114,7 @@
       align-items: center;
       gap: .5rem;
     }
-    .ticker-item .sep { color: #a33; }
+    .ticker-item .sep { color: var(--accent); }
     @keyframes ticker-scroll {
       0%   { transform: translateX(0); }
       100% { transform: translateX(-50%); }
@@ -85,7 +123,7 @@
     /* Bulletin board — cream panel, handwriting notes */
     #bulletin-board {
       position: relative;
-      background: #f6f2e9;
+      background: var(--panel-bg);
       padding: 1rem;
       margin: 1rem 0;
       min-height: 280px;
@@ -94,13 +132,13 @@
 
     .note {
       position: absolute;
-      background: #fff8d8;
+      background: var(--note-bg);
       padding: .4rem .7rem;
       font-size: .9rem;
       box-shadow: 2px 2px 4px rgba(0,0,0,.12);
       font-family: inherit;
       font-style: italic;
-      color: #333;
+      color: var(--note-color);
       cursor: pointer;
       max-width: 140px;
       word-wrap: break-word;
@@ -129,28 +167,28 @@
       padding: .45rem .6rem;
       font-family: inherit;
       font-size: .95rem;
-      background: #fdfcf9;
-      color: #1a1a1a;
-      border: 1px solid #e0ddd5;
+      background: var(--bg);
+      color: var(--main);
+      border: 1px solid var(--border);
     }
 
     .note-form input:focus {
       outline: none;
-      border-color: #a33;
+      border-color: var(--accent);
     }
 
     .note-form button[type="submit"] {
       padding: .45rem .9rem;
       font-family: inherit;
       font-size: .95rem;
-      background: #f6f2e9;
-      color: #a33;
-      border: 1px solid #e0ddd5;
+      background: var(--panel-bg);
+      color: var(--accent);
+      border: 1px solid var(--border);
       cursor: pointer;
     }
 
     .note-form button[type="submit"]:hover {
-      border-color: #a33;
+      border-color: var(--accent);
     }
 
     .char-count {
@@ -162,14 +200,14 @@
     .shuffle-btn {
       background: none;
       border: none;
-      color: #a33;
+      color: var(--accent);
       font-family: inherit;
       font-size: inherit;
       cursor: pointer;
       padding: 0;
-      border-bottom: 1px solid #e3c7c7;
+      border-bottom: 1px solid var(--link-underline);
     }
-    .shuffle-btn:hover { border-bottom-color: #a33; }
+    .shuffle-btn:hover { border-bottom-color: var(--accent); }
 
     footer {
       margin-top: 3rem;
@@ -223,7 +261,10 @@
 </head>
 <body>
   <header>
-    <h1>Edwin Sal</h1>
+    <div class="header-row">
+      <h1>Edwin Sal</h1>
+      <button id="sun-moon-toggle" class="icon-toggle" aria-label="Toggle sun/moon icon">☀︎</button>
+    </div>
     <p class="tagline">AI Developer, Makati, Philippines</p>
   </header>
 
@@ -472,6 +513,13 @@
       }
     }
     document.addEventListener('DOMContentLoaded', loadWikiImage);
+
+    const sunMoonToggle = document.getElementById('sun-moon-toggle');
+    sunMoonToggle.addEventListener('click', () => {
+      const isMoon = sunMoonToggle.textContent === '☀︎';
+      sunMoonToggle.textContent = isMoon ? '☾' : '☀︎';
+      document.documentElement.classList.toggle('dark-mode', isMoon);
+    });
 
   </script>
 </body>

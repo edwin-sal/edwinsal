@@ -326,7 +326,7 @@
   </main>
 
   <footer>
-    <p>You are visitor #<span id="visitor-count">&hellip;</span> &middot; Last updated April 19, 2026 &middot; under 1 megabyte</p>
+    <p>You are visitor #<span id="visitor-count">&hellip;</span> &middot; Last updated <span id="last-updated">&hellip;</span> &middot; under 1 megabyte</p>
   </footer>
 
   <script>
@@ -473,6 +473,21 @@
       } catch (e) { /* silent */ }
     }
     document.addEventListener('DOMContentLoaded', loadVisitorCount);
+
+    async function loadLastUpdated() {
+      const el = document.getElementById('last-updated');
+      try {
+        const res = await fetch('/api/last-updated');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.date) return;
+        el.textContent = new Date(data.date).toLocaleDateString('en-US', {
+          timeZone: 'Asia/Manila',
+          month: 'long', day: 'numeric', year: 'numeric',
+        });
+      } catch (e) { /* silent */ }
+    }
+    document.addEventListener('DOMContentLoaded', loadLastUpdated);
 
     async function loadWikiImage() {
       const container = document.getElementById('wiki-img-container');

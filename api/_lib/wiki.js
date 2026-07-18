@@ -1,16 +1,21 @@
 const { Redis } = require('@upstash/redis');
 
 const WIKI_IMAGE_KEY = 'wiki:image';
-const ATTEMPTS = 10;
 const MIN_CAPTION_WORDS = 10;
-// Pull candidates from a random slice of featured articles rather than truly
-// random pages: only ~4% of random articles have a figure with a 10+ word
-// caption, vs ~40% of featured articles, which are curated and image-rich.
-const CANDIDATE_CATEGORY = 'Category:Featured articles';
-// Wikipedia throttles bursts from shared IPs (Vercel). Pause briefly between
-// article parses to stay under the limit.
-const THROTTLE_MS = 200;
-const USER_AGENT = 'edwinsal.vercel.app (personal site)';
+// Only ~3% of truly random articles have a figure with a 10+ word caption, so
+// we scan a sizeable pool per run and stop at the first hit. If none of the
+// pool qualifies (~15% of runs at this size) the caller keeps the previously
+// stored image, so the page always shows something.
+const POOL_SIZE = 80;
+// Parse this many articles concurrently. Kept modest so a single run's request
+// burst stays under Wikipedia's rate limit on Vercel's shared IPs, while still
+// scanning the whole pool well within the function timeout.
+const CONCURRENCY = 4;
+// list=random caps each request; fetch the pool in batches of this size.
+const RANDOM_BATCH = 40;
+// Wikimedia asks for a descriptive User-Agent with a contact URL; a good one
+// gets more lenient rate limits, which matters on Vercel's shared IPs.
+const USER_AGENT = 'edwinsal-image-of-the-day/1.0 (https://edwinsal.vercel.app/)';
 const MAX_SRC_BYTES = 1_000_000;
 // Wikimedia rejects direct/hotlinked thumbnail requests for arbitrary widths;
 // only these standard $wgThumbnailSteps sizes are served without a 400.
@@ -27,30 +32,23 @@ function articleUrl(title) {
   return `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;
 }
 
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
+// Fetch a pool of truly random article titles (namespace 0), batching because
+// list=random caps how many titles one request returns.
+async function fetchRandomTitles(count) {
+  const titles = [];
+  while (titles.length < count) {
+    const limit = Math.min(RANDOM_BATCH, count - titles.length);
+    const url =
+      `https://en.wikipedia.org/w/api.php?action=query&list=random` +
+      `&rnnamespace=0&rnlimit=${limit}&format=json&formatversion=2`;
+    const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+    if (!res.ok) break;
+    const data = await res.json();
+    const batch = (data.query?.random || []).map((r) => r.title).filter(Boolean);
+    if (!batch.length) break;
+    titles.push(...batch);
   }
-  return arr;
-}
-
-// Fetch a shuffled batch of candidate article titles from a random sort-key
-// slice of the featured-articles category. The random starting letter varies
-// which articles surface across days; the shuffle avoids alphabetical bias.
-async function fetchCandidateTitles() {
-  const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26)); // a-z
-  const url =
-    `https://en.wikipedia.org/w/api.php?action=query&list=categorymembers` +
-    `&cmtitle=${encodeURIComponent(CANDIDATE_CATEGORY)}&cmtype=page&cmlimit=100` +
-    `&cmstartsortkeyprefix=${letter}&format=json&formatversion=2`;
-  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
-  if (!res.ok) return [];
-  const data = await res.json();
-  const titles = (data.query?.categorymembers || []).map((m) => m.title).filter(Boolean);
-  return shuffle(titles);
+  return titles;
 }
 
 async function fetchArticleHtml(title) {
@@ -131,16 +129,24 @@ async function pickFigureFromArticle(title) {
   };
 }
 
-// Fetch a batch of candidate titles, then parse them one at a time (throttled)
-// until one yields a figure with a long-enough caption.
+// Scan a pool of random articles in small concurrent waves, returning as soon
+// as one yields a figure with a long-enough caption. Returns null if the whole
+// pool comes up empty (caller then keeps the previously stored image).
 async function pickImage() {
-  const titles = (await fetchCandidateTitles()).slice(0, ATTEMPTS);
-  for (let i = 0; i < titles.length; i++) {
-    if (i > 0) await sleep(THROTTLE_MS);
-    try {
-      const payload = await pickFigureFromArticle(titles[i]);
-      if (payload) return payload;
-    } catch (_) {}
+  const titles = await fetchRandomTitles(POOL_SIZE);
+  for (let i = 0; i < titles.length; i += CONCURRENCY) {
+    const wave = titles.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      wave.map(async (title) => {
+        try {
+          return await pickFigureFromArticle(title);
+        } catch (_) {
+          return null;
+        }
+      })
+    );
+    const hit = results.find(Boolean);
+    if (hit) return hit;
   }
   return null;
 }

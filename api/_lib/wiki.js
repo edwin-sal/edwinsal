@@ -1,8 +1,15 @@
 const { Redis } = require('@upstash/redis');
 
 const WIKI_IMAGE_KEY = 'wiki:image';
-const ATTEMPTS = 12;
+const ATTEMPTS = 10;
 const MIN_CAPTION_WORDS = 10;
+// Pull candidates from a random slice of featured articles rather than truly
+// random pages: only ~4% of random articles have a figure with a 10+ word
+// caption, vs ~40% of featured articles, which are curated and image-rich.
+const CANDIDATE_CATEGORY = 'Category:Featured articles';
+// Wikipedia throttles bursts from shared IPs (Vercel). Pause briefly between
+// article parses to stay under the limit.
+const THROTTLE_MS = 200;
 const USER_AGENT = 'edwinsal.vercel.app (personal site)';
 const MAX_SRC_BYTES = 1_000_000;
 // Wikimedia rejects direct/hotlinked thumbnail requests for arbitrary widths;
@@ -20,14 +27,30 @@ function articleUrl(title) {
   return `https://en.wikipedia.org/wiki/${encodeURIComponent(title.replace(/ /g, '_'))}`;
 }
 
-async function fetchRandomStandardTitle() {
-  const res = await fetch('https://en.wikipedia.org/api/rest_v1/page/random/summary', {
-    headers: { 'User-Agent': USER_AGENT },
-  });
-  if (!res.ok) return null;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+// Fetch a shuffled batch of candidate article titles from a random sort-key
+// slice of the featured-articles category. The random starting letter varies
+// which articles surface across days; the shuffle avoids alphabetical bias.
+async function fetchCandidateTitles() {
+  const letter = String.fromCharCode(97 + Math.floor(Math.random() * 26)); // a-z
+  const url =
+    `https://en.wikipedia.org/w/api.php?action=query&list=categorymembers` +
+    `&cmtitle=${encodeURIComponent(CANDIDATE_CATEGORY)}&cmtype=page&cmlimit=100` +
+    `&cmstartsortkeyprefix=${letter}&format=json&formatversion=2`;
+  const res = await fetch(url, { headers: { 'User-Agent': USER_AGENT } });
+  if (!res.ok) return [];
   const data = await res.json();
-  if (data.type !== 'standard' || !data.title) return null;
-  return data.title;
+  const titles = (data.query?.categorymembers || []).map((m) => m.title).filter(Boolean);
+  return shuffle(titles);
 }
 
 async function fetchArticleHtml(title) {
@@ -85,9 +108,7 @@ function extractFigures(html) {
   return figures;
 }
 
-async function pickFigureFromArticle() {
-  const title = await fetchRandomStandardTitle();
-  if (!title) return null;
+async function pickFigureFromArticle(title) {
   const html = await fetchArticleHtml(title);
   if (!html) return null;
   const figures = extractFigures(html);
@@ -110,11 +131,14 @@ async function pickFigureFromArticle() {
   };
 }
 
-// Try up to ATTEMPTS random articles until one yields a captioned figure.
+// Fetch a batch of candidate titles, then parse them one at a time (throttled)
+// until one yields a figure with a long-enough caption.
 async function pickImage() {
-  for (let i = 0; i < ATTEMPTS; i++) {
+  const titles = (await fetchCandidateTitles()).slice(0, ATTEMPTS);
+  for (let i = 0; i < titles.length; i++) {
+    if (i > 0) await sleep(THROTTLE_MS);
     try {
-      const payload = await pickFigureFromArticle();
+      const payload = await pickFigureFromArticle(titles[i]);
       if (payload) return payload;
     } catch (_) {}
   }

@@ -87,14 +87,19 @@
     .row-group {
       display: flex;
       gap: 2rem;
+      margin-top: 2.5rem;
     }
     .row-group > section {
       flex: 1;
       min-width: 0;
     }
+    .row-group h2 {
+      margin-top: 0;
+    }
 
     @media (max-width: 500px) {
       .row-group { flex-direction: column; gap: 0; }
+      .row-group > section + section h2 { margin-top: 2.5rem; }
     }
 
     a {

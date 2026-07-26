@@ -84,6 +84,19 @@
 
     p { margin: 0 0 1rem; }
 
+    .row-group {
+      display: flex;
+      gap: 2rem;
+    }
+    .row-group > section {
+      flex: 1;
+      min-width: 0;
+    }
+
+    @media (max-width: 500px) {
+      .row-group { flex-direction: column; gap: 0; }
+    }
+
     a {
       color: var(--accent);
       text-decoration: none;
@@ -263,15 +276,17 @@
   </header>
 
   <main>
-    <section id="about">
-      <h2>About</h2>
-      <p>I spend a lot of time figuring out how to do less, better. Lately, that involves letting systems take a first pass and then shaping what comes out. It's surprisingly effective.</p>
-    </section>
+    <div class="row-group">
+      <section id="about">
+        <h2>About</h2>
+        <p>I spend a lot of time figuring out how to do less, better. Lately, that involves letting systems take a first pass and then shaping what comes out. It's surprisingly effective.</p>
+      </section>
 
-    <section id="projects">
-      <h2>Projects</h2>
-      <p><em>(Coming soon — working on documenting some things worth sharing.)</em></p>
-    </section>
+      <section id="projects">
+        <h2>Projects</h2>
+        <p><em>(Coming soon — working on documenting some things worth sharing.)</em></p>
+      </section>
+    </div>
 
     <section id="wiki-image">
       <h2>image of the day</h2>

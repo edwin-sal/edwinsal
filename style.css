@@ -99,20 +99,6 @@ p { margin: 0 0 1rem; }
   .row-group { flex-direction: column; }
 }
 
-.project-item {
-  margin-bottom: 1rem;
-}
-.project-title {
-  margin-bottom: .3rem;
-}
-.project-title a {
-  font-weight: 600;
-}
-.project-desc {
-  font-size: .95rem;
-  margin-bottom: 0;
-}
-
 a {
   color: var(--accent);
   text-decoration: none;

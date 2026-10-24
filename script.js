@@ -202,7 +202,7 @@ sunMoonToggle.addEventListener('click', () => {
   document.documentElement.classList.toggle('dark-mode', isMoon);
 });
 
-const STAR_CACHE_KEY = 'usage_ring_stars_cache';
+const STAR_CACHE_KEY = 'usage_ring_stars_cache_v2';
 const STAR_CACHE_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
 
 async function loadUsageRingStars() {
@@ -213,7 +213,7 @@ async function loadUsageRingStars() {
   try {
     const cached = JSON.parse(localStorage.getItem(STAR_CACHE_KEY) || 'null');
     if (cached && typeof cached.count === 'number') {
-      el.textContent = `${cached.count} ${cached.count === 1 ? 'star' : 'stars'}`;
+      el.textContent = `${cached.count} ★`;
       if (now - cached.ts < STAR_CACHE_TTL_MS) {
         return;
       }
@@ -226,7 +226,7 @@ async function loadUsageRingStars() {
     const data = await res.json();
     if (typeof data.stargazers_count === 'number') {
       const count = data.stargazers_count;
-      el.textContent = `${count} ${count === 1 ? 'star' : 'stars'}`;
+      el.textContent = `${count} ★`;
       try {
         localStorage.setItem(STAR_CACHE_KEY, JSON.stringify({ count, ts: now }));
       } catch (e) { /* silent */ }
